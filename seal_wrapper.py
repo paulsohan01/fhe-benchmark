@@ -1,29 +1,45 @@
-from timer import Timer
 import sys
+from timer import Timer
 
-class DummySEAL:
+class SimulatedFHE:
     def __init__(self):
         self.timer = Timer()
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext_vector):
+        """
+        Simulates encryption and estimates latency, ciphertext size, expansion, and noise.
+        """
         self.timer.start()
-        ct = [x * 2 for x in plaintext]
-        time_taken = self.timer.stop()
-        ct_size = sys.getsizeof(ct)
-        pt_size = sys.getsizeof(plaintext)
-        expansion = ct_size / pt_size if pt_size else 0
-        noise = 0.01 * sum(plaintext)  # mock noise
-        return ct, time_taken, ct_size, pt_size, expansion, noise
+        ciphertext_vector = [x * 2 for x in plaintext_vector]  # mock encryption
+        encryption_time = self.timer.stop()
 
-    def decrypt(self, ciphertext):
-        self.timer.start()
-        pt = [x // 2 for x in ciphertext]
-        time_taken = self.timer.stop()
-        return pt, time_taken
+        ciphertext_size = sys.getsizeof(ciphertext_vector)
+        plaintext_size = sys.getsizeof(plaintext_vector)
+        expansion_ratio = ciphertext_size / plaintext_size if plaintext_size else 0
 
-    def add(self, ct1, ct2):
+        # Simpler noise model: linearly proportional to total input
+        noise_estimate = 0.01 * sum(plaintext_vector)
+
+        return ciphertext_vector, encryption_time, ciphertext_size, plaintext_size, expansion_ratio, noise_estimate
+
+    def decrypt(self, ciphertext_vector):
+        """
+        Simulates decryption and returns time taken.
+        """
         self.timer.start()
-        result = [a + b for a, b in zip(ct1, ct2)]
-        time_taken = self.timer.stop()
-        noise = 0.005 * sum(result)  # mock noise growth
-        return result, time_taken, noise
+        decrypted = [x // 2 for x in ciphertext_vector]  # reverse of encryption
+        decryption_time = self.timer.stop()
+        return decrypted, decryption_time
+
+    def add(self, ciphertext_vector1, ciphertext_vector2):
+        """
+        Simulates homomorphic addition and estimates new noise.
+        """
+        self.timer.start()
+        result_ciphertext = [a + b for a, b in zip(ciphertext_vector1, ciphertext_vector2)]
+        addition_time = self.timer.stop()
+
+        # Additive noise: sum proportional again
+        noise_estimate = 0.01 * sum(result_ciphertext)
+
+        return result_ciphertext, addition_time, noise_estimate

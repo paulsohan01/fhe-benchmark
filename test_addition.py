@@ -1,38 +1,47 @@
-from seal_wrapper import DummySEAL
 import pandas as pd
 import csv
+from seal_wrapper import SimulatedFHE
 
-def run_benchmark_on_dataset(csv_path, output_csv):
-    fhe = DummySEAL()
-    df = pd.read_csv(csv_path)
+def run_fhe_benchmark(input_csv, output_csv):
+    fhe = SimulatedFHE()
+    df = pd.read_csv(input_csv)
+    results = []
 
-    metrics = []
-    for idx, row in df.iterrows():
-        plain1 = list(map(float, row.values))
-        plain2 = list(map(float, row.values))# simulate repeated values
+    for row_index, row in df.iterrows():
+        try:
+            # Convert each row of dataset to float vector (plaintext vector)
+            plaintext_vector = list(map(float, row.values))
 
-        ct1, enc_time1, ct_size1, pt_size1, expansion1, noise1 = fhe.encrypt(plain1)
-        ct2, enc_time2, ct_size2, pt_size2, expansion2, noise2 = fhe.encrypt(plain2)
+            # Encrypt the same row twice to simulate homomorphic addition
+            ct1, enc_time1, ct1_size, pt1_size, expansion1, noise1 = fhe.encrypt(plaintext_vector)
+            ct2, enc_time2, ct2_size, pt2_size, expansion2, noise2 = fhe.encrypt(plaintext_vector)
 
-        ct_result, add_time, noise_add = fhe.add(ct1, ct2)
+            # Homomorphic addition of ciphertexts
+            added_ct, add_time, noise_after_add = fhe.add(ct1, ct2)
 
-        pt_result, dec_time = fhe.decrypt(ct_result)
+            # Decryption
+            decrypted_result, dec_time = fhe.decrypt(added_ct)
 
-        metrics.append({
-            'Row': idx,
-            'Plaintext Size (bytes)': pt_size1,
-            'Ciphertext Size (bytes)': ct_size1,
-            'Ciphertext Expansion': expansion1,
-            'Encryption Time (s)': enc_time1 + enc_time2,
-            'Addition Time (s)': add_time,
-            'Decryption Time (s)': dec_time,
-            'Noise Before Add': noise1,
-            'Noise After Add': noise_add
-        })
+            # Record metrics
+            results.append({
+                "RowIndex": row_index,
+                "EncryptTimeTotal": enc_time1 + enc_time2,
+                "AdditionTime": add_time,
+                "DecryptionTime": dec_time,
+                "PlaintextSize": pt1_size,
+                "CiphertextSize": ct1_size,
+                "ExpansionRatio": expansion1,
+                "InitialNoise": noise1,
+                "NoiseAfterAddition": noise_after_add
+            })
 
-    with open(output_csv, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=metrics[0].keys())
+        except Exception as e:
+            print(f"Error processing row {row_index}: {e}")
+
+    # Save metrics to CSV
+    with open(output_csv, "w", newline="") as output_file:
+        writer = csv.DictWriter(output_file, fieldnames=results[0].keys())
         writer.writeheader()
-        writer.writerows(metrics)
+        writer.writerows(results)
 
-    print(f"✅ Benchmark complete. Results saved to {output_csv}")
+    print("FHE benchmarking complete. Metrics saved.")
