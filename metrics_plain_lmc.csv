@@ -1,0 +1,2 @@
+training_time,inference_time,accuracy,mse,model_size_bytes
+0.0,0.020390748977661133,0.7941176470588235,0.20588235294117646,208

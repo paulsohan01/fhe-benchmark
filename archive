@@ -1,0 +1,70 @@
+# seal_wrapper.py
+
+import time
+import numpy as np
+import sys
+sys.path.append("./seal")  # Path to compiled SEAL wrapper if needed
+
+from seal import (
+    EncryptionParameters,
+    SEALContext,
+    KeyGenerator,
+    Encryptor,
+    Decryptor,
+    Evaluator,
+    CKKSEncoder,
+    scheme_type,
+    CoeffModulus,
+    PlainModulus
+)
+
+class SEALWrapper:
+    def __init__(self):
+        self.scale = 2 ** 40  # Recommended CKKS scale
+
+        parms = EncryptionParameters(scheme_type.ckks)
+        poly_modulus_degree = 8192
+        parms.set_poly_modulus_degree(poly_modulus_degree)
+        parms.set_coeff_modulus(CoeffModulus.Create(poly_modulus_degree, [60, 40, 60]))
+
+        self.context = SEALContext.Create(parms)
+        self.keygen = KeyGenerator(self.context)
+        self.public_key = self.keygen.public_key()
+        self.secret_key = self.keygen.secret_key()
+        self.encryptor = Encryptor(self.context, self.public_key)
+        self.decryptor = Decryptor(self.context, self.secret_key)
+        self.evaluator = Evaluator(self.context)
+        self.encoder = CKKSEncoder(self.context)
+
+        self.slot_count = self.encoder.slot_count()
+
+    def encrypt(self, input_vector):
+        plain = self.encoder.encode(input_vector, self.scale)
+        start_time = time.time()
+        ciphertext = self.encryptor.encrypt(plain)
+        encryption_time = time.time() - start_time
+
+        pt_size = sys.getsizeof(str(input_vector))
+        ct_size = sys.getsizeof(ciphertext.save())  # You may need to implement save() in the wrapper
+        expansion = ct_size / pt_size if pt_size else 0
+
+        return ciphertext, encryption_time, ct_size, pt_size, expansion
+
+    def decrypt(self, ciphertext, original):
+        start_time = time.time()
+        plain = self.decryptor.decrypt(ciphertext)
+        decrypted = self.encoder.decode(plain)
+        decryption_time = time.time() - start_time
+
+        # Noise estimation: absolute error between decrypted and expected plaintext
+        noise = np.mean([abs(d - o) for d, o in zip(decrypted, original)])
+
+        return decrypted, decryption_time, noise
+
+    def linear_inference(self, ciphertext, weights):
+        plain_weights = self.encoder.encode(weights, self.scale)
+        start_time = time.time()
+        result = self.evaluator.multiply_plain(ciphertext, plain_weights)
+        self.evaluator.rescale_to_next_inplace(result)
+        op_time = time.time() - start_time
+        return result, op_time
