@@ -1,0 +1,2 @@
+training_time,preparation_time,inference_time,accuracy,mse,scheme,training_mode
+0.5029771327972412,1.5380232334136963,5.318724632263184,0.43137254901960786,0.5686274509803921,bfv,encrypted

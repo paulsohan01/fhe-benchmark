@@ -1,0 +1,7 @@
+# example; choose working version
+tenseal==0.3.16
+pandas
+numpy
+scikit-learn
+flask               # used by server.py
+requests            # used by client.py

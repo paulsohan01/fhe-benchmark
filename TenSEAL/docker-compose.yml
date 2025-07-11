@@ -1,0 +1,24 @@
+version: "3.9"
+services:
+  server:
+    build: .
+    container_name: fhe_server
+    command: ["/entrypoint_server.sh"]
+    ports:
+      - "8000:8000"               # Flask runs on 0.0.0.0:8000
+    volumes:
+      - ../results:/app/results   # share metrics
+    environment:
+      - ROLE=server
+
+  client:
+    build: .
+    container_name: fhe_client
+    depends_on:
+      - server
+    command: ["/entrypoint_client.sh"]
+    volumes:
+      - ../results:/app/results
+    environment:
+      - ROLE=client
+      - SERVER_URL=http://server:8000

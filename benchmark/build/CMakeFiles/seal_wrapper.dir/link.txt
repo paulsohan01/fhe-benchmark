@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -flto -shared  -o seal_wrapper.cpython-310-x86_64-linux-gnu.so CMakeFiles/seal_wrapper.dir/bindings.cpp.o  /usr/local/lib/libseal-4.1.a 
